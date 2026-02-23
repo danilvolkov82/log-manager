@@ -1,25 +1,37 @@
+/**
+ * @file internal/logger.cpp
+ * @brief Implementation of Internal::Logger.
+ */
 #include <mutex>
 #include <stdexcept>
 #include <vector>
 
-#include "internal/logger.h"
-#include "tools.h"
+#include "logger.h"
+#include "../tools.h"
 
-namespace LogManager::Internal {
+using namespace LogManager::Internal;
+
+/**
+ * @brief Thread-safe sink storage and dispatch logic for Logger.
+ */
 class Logger::Impl {
 private:
-    std::mutex sinks_mutex;
-    std::vector<std::shared_ptr<ISink>> sinks;
+    std::mutex _sinks_mutex;
+    std::vector<std::shared_ptr<ISink>> _sinks;
 
 public:
     Impl() = default;
     ~Impl() = default;
 
+    /**
+     * @brief Delivers a log entry to all registered sinks.
+     * @param entry Entry to dispatch.
+     */
     void log(const LogDetails &entry) {
         std::vector<std::shared_ptr<ISink>> sinks_snapshot;
         {
-            std::lock_guard<std::mutex> lock(sinks_mutex);
-            sinks_snapshot = sinks;
+            std::lock_guard<std::mutex> lock(_sinks_mutex);
+            sinks_snapshot = _sinks;
         }
 
         for(const auto &sink : sinks_snapshot) {
@@ -31,81 +43,89 @@ public:
         }
     }
 
+    /**
+     * @brief Registers a sink.
+     * @param sink Sink to register.
+     * @throws std::invalid_argument If @p sink is null.
+     */
     void addSink(std::shared_ptr<ISink> sink) {
         if(!sink) {
             throw std::invalid_argument("sink must not be null");
         }
 
-        std::lock_guard<std::mutex> lock(sinks_mutex);
-        sinks.push_back(std::move(sink));
+        std::lock_guard<std::mutex> lock(_sinks_mutex);
+        _sinks.push_back(std::move(sink));
     }
 };
-}
 
-using namespace LogManager::Internal;
 Logger::Logger()
     : ILog()
-    , impl(std::make_unique<Logger::Impl>())
+    , _impl(std::make_unique<Logger::Impl>())
 {}
 
 Logger::~Logger() = default;
 
+#define LOG_MESSAGE(level) \
+    LogDetails entry(level, tag, message); \
+    _impl->log(entry); \
+
 LOG_METHOD_MESSAGE(Logger::verbose) {
-    LogDetails entry(LogLevel::VERBOSE, tag, message);
-    impl->log(entry);
+    LOG_MESSAGE(LogLevel::VERBOSE)
 }
 
 LOG_METHOD_MESSAGE(Logger::info) {
-    LogDetails entry(LogLevel::INFO, tag, message);
-    impl->log(entry);
+    LOG_MESSAGE(LogLevel::INFO)
 }
 
 LOG_METHOD_MESSAGE(Logger::warn) {
-    LogDetails entry(LogLevel::WARN, tag, message);
-    impl->log(entry);
+    LOG_MESSAGE(LogLevel::WARN)
 }
 
 LOG_METHOD_MESSAGE(Logger::error) {
-    LogDetails entry(LogLevel::ERROR, tag, message);
-    impl->log(entry);
+    LOG_MESSAGE(LogLevel::ERROR);
 }
 
 LOG_METHOD_MESSAGE(Logger::fatal) {
-    LogDetails entry(LogLevel::FATAL, tag, message);
-    impl->log(entry);
+    LOG_MESSAGE(LogLevel::FATAL);
 }
+#undef LOG_MESSAGE
+
+#define LOG_EXCEPTION(level) \
+    LogDetails entry(level, tag, e); \
+    _impl->log(entry); \
 
 LOG_METHOD_EXCEPTION(Logger::warn) {
-    LogDetails entry(LogLevel::WARN, tag, e);
-    impl->log(entry);
+    LOG_EXCEPTION(LogLevel::WARN)
 }
 
 LOG_METHOD_EXCEPTION(Logger::error) {
-    LogDetails entry(LogLevel::ERROR, tag, e);
-    impl->log(entry);
+    LOG_EXCEPTION(LogLevel::ERROR)
 }
 
 LOG_METHOD_EXCEPTION(Logger::fatal) {
-    LogDetails entry(LogLevel::FATAL, tag, e);
-    impl->log(entry);
+    LOG_EXCEPTION(LogLevel::FATAL)
 }
 
+#undef LOG_EXCEPTION
+
+#define LOG_MESSAGE_AND_EXCEPTION(level) \
+    LogDetails entry(level, tag, message, e); \
+    _impl->log(entry); \
+
 LOG_METHOD_MESSAGE_AND_EXCEPTION(Logger::warn) {
-    LogDetails entry(LogLevel::WARN, tag, message, e);
-    impl->log(entry);
+    LOG_MESSAGE_AND_EXCEPTION(LogLevel::WARN)
 }
 
 LOG_METHOD_MESSAGE_AND_EXCEPTION(Logger::error) {
-    LogDetails entry(LogLevel::ERROR, tag, message, e);
-    impl->log(entry);
+    LOG_MESSAGE_AND_EXCEPTION(LogLevel::ERROR)
 }
 
 LOG_METHOD_MESSAGE_AND_EXCEPTION(Logger::fatal) {
-    LogDetails entry(LogLevel::FATAL, tag, message, e);
-    impl->log(entry);
+    LOG_MESSAGE_AND_EXCEPTION(LogLevel::FATAL)
 }
+#undef LOG_MESSAGE_AND_EXCEPTION
 
 void
 Logger::addSink(std::shared_ptr<ISink> sink) {
-    impl->addSink(std::move(sink));
+    _impl->addSink(std::move(sink));
 }

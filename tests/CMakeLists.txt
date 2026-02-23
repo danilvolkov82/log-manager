@@ -1,3 +1,11 @@
-# Keep test folder wiring consistent with sibling projects.
-# Add test executables and gtest_discover_tests(...) here.
-message(STATUS "BUILD_TESTS is ON, but no log-manager tests are configured yet.")
+add_executable(log-manager-tests
+    log-builder-tests.cpp
+)
+
+target_link_libraries(log-manager-tests
+    GTest::gtest_main
+    log-manager
+)
+
+include(GoogleTest)
+gtest_discover_tests(log-manager-tests)
