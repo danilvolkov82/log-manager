@@ -1,9 +1,20 @@
 add_executable(log-manager-tests
     log-builder-tests.cpp
+    logger-tests.cpp
 )
 
+if(TARGET GTest::gtest_main)
+    set(LOG_MANAGER_GTEST_MAIN_TARGET GTest::gtest_main)
+elseif(TARGET gtest_main)
+    set(LOG_MANAGER_GTEST_MAIN_TARGET gtest_main)
+else()
+    message(FATAL_ERROR
+        "GoogleTest main target not found. Ensure cmake/GTest.cmake is included before tests.")
+endif()
+
 target_link_libraries(log-manager-tests
-    GTest::gtest_main
+    PRIVATE
+    ${LOG_MANAGER_GTEST_MAIN_TARGET}
     log-manager
 )
 
