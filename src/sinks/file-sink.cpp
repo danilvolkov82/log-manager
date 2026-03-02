@@ -14,25 +14,14 @@
 #include <sstream>
 #include <string>
 #include <system_error>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace {
 namespace fs = std::filesystem;
-
-void replaceAll(std::string &value, const std::string &from, const std::string &to) {
-    if(from.empty()) {
-        return;
-    }
-
-    std::size_t start_pos = 0;
-    while((start_pos = value.find(from, start_pos)) != std::string::npos) {
-        value.replace(start_pos, from.length(), to);
-        start_pos += to.length();
-    }
-}
-
-std::tm toLocalTime(std::chrono::system_clock::time_point timestamp) {
+std::tm 
+toLocalTime(std::chrono::system_clock::time_point timestamp) {
     const std::time_t time = std::chrono::system_clock::to_time_t(timestamp);
     std::tm tm{};
 #if defined(_WIN32)
@@ -40,22 +29,26 @@ std::tm toLocalTime(std::chrono::system_clock::time_point timestamp) {
 #else
     localtime_r(&time, &tm);
 #endif
+
     return tm;
 }
 
-std::string formatTm(const std::tm &tm, const char *pattern) {
+std::string 
+formatTm(const std::tm &tm, const char *pattern) {
     std::ostringstream stream;
     stream << std::put_time(&tm, pattern);
     return stream.str();
 }
 
-std::string threadIdToString(const std::thread::id &thread_id) {
+std::string 
+threadIdToString(const std::thread::id &thread_id) {
     std::ostringstream stream;
     stream << thread_id;
     return stream.str();
 }
 
-std::string exceptionToString(const std::exception_ptr &exception) {
+std::string 
+exceptionToString(const std::exception_ptr &exception) {
     if(!exception) {
         return {};
     }
@@ -69,7 +62,8 @@ std::string exceptionToString(const std::exception_ptr &exception) {
     }
 }
 
-std::string levelToString(LogManager::LogLevel level) {
+std::string 
+levelToString(LogManager::LogLevel level) {
     switch(level) {
     case LogManager::LogLevel::VERBOSE:
         return "VERBOSE";
@@ -86,36 +80,83 @@ std::string levelToString(LogManager::LogLevel level) {
     }
 }
 
-std::string renderFilenameTemplate(const std::string &filename_template, const LogManager::LogDetails &entry) {
-    std::string rendered = filename_template;
-    const std::tm tm = toLocalTime(entry.timestamp);
-
-    replaceAll(rendered, "{yyyy}", formatTm(tm, "%Y"));
-    replaceAll(rendered, "{MM}", formatTm(tm, "%m"));
-    replaceAll(rendered, "{dd}", formatTm(tm, "%d"));
-    replaceAll(rendered, "{HH}", formatTm(tm, "%H"));
-    replaceAll(rendered, "{mm}", formatTm(tm, "%M"));
-    replaceAll(rendered, "{ss}", formatTm(tm, "%S"));
-    replaceAll(rendered, "{date}", formatTm(tm, "%Y-%m-%d"));
-    replaceAll(rendered, "{datetime}", formatTm(tm, "%Y%m%d-%H%M%S"));
-    replaceAll(rendered, "{level}", levelToString(entry.level));
-    replaceAll(rendered, "{tag}", entry.tag);
-
-    return rendered;
+inline void
+clear_token(std::vector<std::string> &tokens, std::stringstream &token, bool &token_clean) {
+    tokens.push_back(token.str());
+    token.clear();
+    token.str("");
+    token_clean = true;
 }
 
-std::string renderMessageTemplate(const std::string &format_template, const LogManager::LogDetails &entry) {
-    std::string rendered = format_template;
+std::vector<std::string> 
+tokenize(std::string_view source) {
+    std::vector<std::string> result;
+    std::stringstream token;
+    bool token_clean = true;
+
+    for(char c : source) {
+        if(c == '{' && !token_clean) {
+            clear_token(result, token, token_clean);
+        }
+
+        token << c;
+        token_clean = false;
+        if(c == '}') {
+            clear_token(result, token, token_clean);
+        }
+    }
+
+    if(!token_clean) {
+        result.push_back(token.str());
+    }
+
+    return result;
+}
+
+std::string 
+renderTemplate(std::string_view source, const std::unordered_map<std::string, std::string> &values) {
+    std::vector<std::string> tokens = tokenize(source);
+    std::stringstream result;
+    for(const auto token : tokens) {
+        auto found_value = values.find(token);
+        result << (found_value != values.cend() ? found_value->second : token);
+    }
+
+    return result.str();
+}
+
+std::string 
+renderFilenameTemplate(std::string_view filename_template, const LogManager::LogDetails &entry) {
     const std::tm tm = toLocalTime(entry.timestamp);
+    std::unordered_map<std::string, std::string> formats = {
+        {"{yyyy}", formatTm(tm, "%Y")},
+        {"{MM}", formatTm(tm, "%m")},
+        {"{dd}", formatTm(tm, "%d")},
+        {"{HH}", formatTm(tm, "%H")},
+        {"{mm}", formatTm(tm, "%M")},
+        {"{ss}", formatTm(tm, "%S")},
+        {"{date}", formatTm(tm, "%Y-%m-%d")},
+        {"{datetime}", formatTm(tm, "%Y%m%d-%H%M%S")},
+        {"{level}", levelToString(entry.level)},
+        {"{tag}", entry.tag}
+    };
 
-    replaceAll(rendered, "{timestamp}", formatTm(tm, "%Y-%m-%d %H:%M:%S"));
-    replaceAll(rendered, "{level}", levelToString(entry.level));
-    replaceAll(rendered, "{tag}", entry.tag);
-    replaceAll(rendered, "{message}", entry.message);
-    replaceAll(rendered, "{thread_id}", threadIdToString(entry.thread_id));
-    replaceAll(rendered, "{exception}", exceptionToString(entry.exception));
+    return renderTemplate(filename_template, formats);
+}
 
-    return rendered;
+std::string 
+renderMessageTemplate(std::string_view format_template, const LogManager::LogDetails &entry) {
+    const std::tm tm = toLocalTime(entry.timestamp);
+    std::unordered_map<std::string, std::string> formats = {
+        {"{timestamp}", formatTm(tm, "%Y-%m-%d %H:%M:%S")},
+        {"{level}", levelToString(entry.level)},
+        {"{tag}", entry.tag},
+        {"{message}", entry.message},
+        {"{thread_id}", threadIdToString(entry.thread_id)},
+        {"{exception}", exceptionToString(entry.exception)}
+    };
+
+    return renderTemplate(format_template, formats);
 }
 
 struct BackupFile {
