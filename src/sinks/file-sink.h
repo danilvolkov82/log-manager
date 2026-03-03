@@ -61,6 +61,7 @@ public:
 	FileSink();
 	~FileSink();
 
+	void configure(const std::string &json_config) override;
 	void log(const LogDetails &log_entry) override;
 };
 } // LogManager::Sinks

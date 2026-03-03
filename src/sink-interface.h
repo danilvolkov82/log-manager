@@ -5,6 +5,7 @@
 #ifndef SINK_INTERFACE_H
 #define SINK_INTERFACE_H
 #pragma once
+#include <string>
 
 #include "tools.h"
 
@@ -23,6 +24,7 @@ public:
      * @brief Virtual destructor.
      */
     virtual ~ISink() = default;
+    virtual void configure(const std::string &json_config);
 
     /**
      * @brief Writes a log entry to the sink.

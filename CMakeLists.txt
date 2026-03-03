@@ -9,7 +9,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(LOG_MANAGER_SOURCES
     src/log-builder.cpp
     src/internal/logger.cpp
+    src/internal/time-tools.cpp
+    src/internal/log-message-tools.cpp
 )
+
+include(cmake/Json.cmake)
 
 file(GLOB LOG_MANAGER_PUBLIC_HEADERS "src/*.h")
 list(SORT LOG_MANAGER_PUBLIC_HEADERS)
@@ -21,6 +25,10 @@ target_include_directories(log-manager
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
 )
+target_link_libraries(log-manager
+    PRIVATE
+        nlohmann_json::nlohmann_json
+)
 
 add_library(log-manager-shared SHARED ${LOG_MANAGER_SOURCES})
 set_target_properties(log-manager-shared PROPERTIES OUTPUT_NAME logmanager++)
@@ -28,6 +36,10 @@ target_include_directories(log-manager-shared
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(log-manager-shared
+    PRIVATE
+        nlohmann_json::nlohmann_json
 )
 
 install(TARGETS log-manager log-manager-shared

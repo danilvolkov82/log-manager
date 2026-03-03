@@ -4,160 +4,28 @@
 #include "file-sink.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <charconv>
+#include <chrono>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
-#include <iomanip>
 #include <mutex>
 #include <regex>
-#include <sstream>
 #include <string>
 #include <system_error>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
+#include <unordered_set>
+
+#include <nlohmann/json.hpp>
+
+#include "internal/time-tools.h"
+#include "internal/log-message-tools.h"
+
+using namespace LogManager::Internal;
 
 namespace {
 namespace fs = std::filesystem;
-std::tm 
-toLocalTime(std::chrono::system_clock::time_point timestamp) {
-    const std::time_t time = std::chrono::system_clock::to_time_t(timestamp);
-    std::tm tm{};
-#if defined(_WIN32)
-    localtime_s(&tm, &time);
-#else
-    localtime_r(&time, &tm);
-#endif
-
-    return tm;
-}
-
-std::string 
-formatTm(const std::tm &tm, const char *pattern) {
-    std::ostringstream stream;
-    stream << std::put_time(&tm, pattern);
-    return stream.str();
-}
-
-std::string 
-threadIdToString(const std::thread::id &thread_id) {
-    std::ostringstream stream;
-    stream << thread_id;
-    return stream.str();
-}
-
-std::string 
-exceptionToString(const std::exception_ptr &exception) {
-    if(!exception) {
-        return {};
-    }
-
-    try {
-        std::rethrow_exception(exception);
-    } catch(const std::exception &e) {
-        return e.what();
-    } catch(...) {
-        return "unknown exception";
-    }
-}
-
-std::string 
-levelToString(LogManager::LogLevel level) {
-    switch(level) {
-    case LogManager::LogLevel::VERBOSE:
-        return "VERBOSE";
-    case LogManager::LogLevel::INFO:
-        return "INFO";
-    case LogManager::LogLevel::WARN:
-        return "WARN";
-    case LogManager::LogLevel::ERROR:
-        return "ERROR";
-    case LogManager::LogLevel::FATAL:
-        return "FATAL";
-    default:
-        return "UNKNOWN";
-    }
-}
-
-inline void
-clear_token(std::vector<std::string> &tokens, std::stringstream &token, bool &token_clean) {
-    tokens.push_back(token.str());
-    token.clear();
-    token.str("");
-    token_clean = true;
-}
-
-std::vector<std::string> 
-tokenize(std::string_view source) {
-    std::vector<std::string> result;
-    std::stringstream token;
-    bool token_clean = true;
-
-    for(char c : source) {
-        if(c == '{' && !token_clean) {
-            clear_token(result, token, token_clean);
-        }
-
-        token << c;
-        token_clean = false;
-        if(c == '}') {
-            clear_token(result, token, token_clean);
-        }
-    }
-
-    if(!token_clean) {
-        result.push_back(token.str());
-    }
-
-    return result;
-}
-
-std::string 
-renderTemplate(std::string_view source, const std::unordered_map<std::string, std::string> &values) {
-    std::vector<std::string> tokens = tokenize(source);
-    std::stringstream result;
-    for(const auto token : tokens) {
-        auto found_value = values.find(token);
-        result << (found_value != values.cend() ? found_value->second : token);
-    }
-
-    return result.str();
-}
-
-std::string 
-renderFilenameTemplate(std::string_view filename_template, const LogManager::LogDetails &entry) {
-    const std::tm tm = toLocalTime(entry.timestamp);
-    std::unordered_map<std::string, std::string> formats = {
-        {"{yyyy}", formatTm(tm, "%Y")},
-        {"{MM}", formatTm(tm, "%m")},
-        {"{dd}", formatTm(tm, "%d")},
-        {"{HH}", formatTm(tm, "%H")},
-        {"{mm}", formatTm(tm, "%M")},
-        {"{ss}", formatTm(tm, "%S")},
-        {"{date}", formatTm(tm, "%Y-%m-%d")},
-        {"{datetime}", formatTm(tm, "%Y%m%d-%H%M%S")},
-        {"{level}", levelToString(entry.level)},
-        {"{tag}", entry.tag}
-    };
-
-    return renderTemplate(filename_template, formats);
-}
-
-std::string 
-renderMessageTemplate(std::string_view format_template, const LogManager::LogDetails &entry) {
-    const std::tm tm = toLocalTime(entry.timestamp);
-    std::unordered_map<std::string, std::string> formats = {
-        {"{timestamp}", formatTm(tm, "%Y-%m-%d %H:%M:%S")},
-        {"{level}", levelToString(entry.level)},
-        {"{tag}", entry.tag},
-        {"{message}", entry.message},
-        {"{thread_id}", threadIdToString(entry.thread_id)},
-        {"{exception}", exceptionToString(entry.exception)}
-    };
-
-    return renderTemplate(format_template, formats);
-}
 
 struct BackupFile {
     std::uint32_t index;
@@ -320,6 +188,15 @@ int toLocalDateKey(std::chrono::system_clock::time_point timestamp) {
     return (year * 10000) + (month * 100) + day;
 }
 
+bool tryToLocalDateKey(std::chrono::system_clock::time_point timestamp, int &date_key) {
+    try {
+        date_key = toLocalDateKey(timestamp);
+        return true;
+    } catch(...) {
+        return false;
+    }
+}
+
 bool shouldRotateByDaily(const fs::path &current_file, std::chrono::system_clock::time_point entry_timestamp) {
     std::error_code ec;
     if(!fs::exists(current_file, ec) || !fs::is_regular_file(current_file, ec)) {
@@ -331,8 +208,13 @@ bool shouldRotateByDaily(const fs::path &current_file, std::chrono::system_clock
         return false;
     }
 
-    const int file_date = toLocalDateKey(fileTimeToSystemClock(last_write_time));
-    const int entry_date = toLocalDateKey(entry_timestamp);
+    int file_date = 0;
+    int entry_date = 0;
+    if(!tryToLocalDateKey(fileTimeToSystemClock(last_write_time), file_date) ||
+       !tryToLocalDateKey(entry_timestamp, entry_date)) {
+        return false;
+    }
+
     return file_date != entry_date;
 }
 
@@ -503,6 +385,8 @@ bool hasFlag(RotationMode value, RotationMode flag) {
 }
 
 using namespace LogManager::Sinks;
+namespace json = nlohmann::json;
+
 class FileSink::Impl {
 private:
     std::string _format{"[{timestamp}] [{level} {tag}] {message} {exception}"};
@@ -520,6 +404,9 @@ private:
 public:
     Impl() = default;
     ~Impl() = default;
+
+    void configure(const std::string &json_config) {
+    }
 
     void log(const LogDetails &log_entry) {
         std::lock_guard<std::mutex> lock(_log_mutex);
@@ -556,6 +443,11 @@ FileSink::FileSink()
     : _impl(std::make_unique<FileSink::Impl>()) {}
 
 FileSink::~FileSink() = default;
+
+void
+FileSink::configure(const std::string &json_config) {
+    _impl->configure(json_config);
+}
 
 void
 FileSink::log(const LogDetails &log_entry) {
