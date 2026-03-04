@@ -24,7 +24,15 @@ public:
      * @brief Virtual destructor.
      */
     virtual ~ISink() = default;
-    virtual void configure(const std::string &json_config);
+
+    /**
+     * @brief Applies sink-specific configuration.
+     *
+     * The JSON shape is sink-dependent and interpreted by concrete sink implementations.
+     *
+     * @param json_config Sink configuration payload in JSON format.
+     */
+    virtual void configure(const std::string &json_config) = 0;
 
     /**
      * @brief Writes a log entry to the sink.

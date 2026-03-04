@@ -15,6 +15,11 @@ using namespace LogManager;
 class RecordingSink : public ISink {
 public:
     std::vector<LogDetails> entries;
+    std::string last_config;
+
+    void configure(const std::string &json_config) override {
+        last_config = json_config;
+    }
 
     void log(const LogDetails &log_entry) override {
         std::lock_guard<std::mutex> lock(_mutex);

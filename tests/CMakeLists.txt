@@ -2,6 +2,7 @@ add_executable(log-manager-tests
     log-builder-tests.cpp
     logger-tests.cpp
     log-message-tools-tests.cpp
+    file-sink-tools-tests.cpp
     time-tools-tests.cpp
 )
 

@@ -11,6 +11,7 @@ set(LOG_MANAGER_SOURCES
     src/internal/logger.cpp
     src/internal/time-tools.cpp
     src/internal/log-message-tools.cpp
+    src/internal/sinks/file-sink-tools.cpp
 )
 
 include(cmake/Json.cmake)
