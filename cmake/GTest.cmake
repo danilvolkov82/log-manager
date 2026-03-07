@@ -17,6 +17,7 @@ if(NOT TARGET GTest::gtest_main)
 
     # Ensure extracted archives get fresh timestamps to avoid stale rebuilds (CMP0135).
     cmake_policy(SET CMP0135 NEW)
+    set(INSTALL_GTEST OFF CACHE BOOL "Disable googletest install rules in parent project" FORCE)
 
     FetchContent_Declare(
         googletest

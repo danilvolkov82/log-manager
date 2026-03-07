@@ -20,8 +20,18 @@ set(LOG_MANAGER_SOURCES
 
 include(cmake/Json.cmake)
 
-file(GLOB LOG_MANAGER_PUBLIC_HEADERS "src/*.h")
+file(GLOB LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src" "src/*.h")
+file(GLOB_RECURSE LOG_MANAGER_SINK_PUBLIC_HEADERS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src" "src/sinks/*.h")
+set(LOG_MANAGER_PUBLIC_HEADERS
+    ${LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS}
+    ${LOG_MANAGER_SINK_PUBLIC_HEADERS}
+)
 list(SORT LOG_MANAGER_PUBLIC_HEADERS)
+
+set(LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS_ABS)
+foreach(HEADER_FILE ${LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS})
+    list(APPEND LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS_ABS "${CMAKE_CURRENT_SOURCE_DIR}/src/${HEADER_FILE}")
+endforeach()
 
 add_library(log-manager STATIC ${LOG_MANAGER_SOURCES})
 set_target_properties(log-manager PROPERTIES OUTPUT_NAME logmanager++)
@@ -29,6 +39,7 @@ target_include_directories(log-manager
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
+        $<INSTALL_INTERFACE:include/log-manager>
 )
 target_link_libraries(log-manager
     PRIVATE
@@ -41,6 +52,7 @@ target_include_directories(log-manager-shared
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
+        $<INSTALL_INTERFACE:include/log-manager>
 )
 target_link_libraries(log-manager-shared
     PRIVATE
@@ -53,12 +65,15 @@ install(TARGETS log-manager log-manager-shared
     RUNTIME DESTINATION bin
 )
 
-install(FILES ${LOG_MANAGER_PUBLIC_HEADERS} DESTINATION include/log-manager)
+install(FILES ${LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS_ABS} DESTINATION include/log-manager)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/sinks/" DESTINATION include/log-manager/sinks
+    FILES_MATCHING
+    PATTERN "*.h"
+)
 
 set(SINGLE_HEADER_CONTENT "#ifndef LOG_MANAGER_H\n#define LOG_MANAGER_H\n\n")
 foreach(HEADER_FILE ${LOG_MANAGER_PUBLIC_HEADERS})
-    get_filename_component(HEADER_NAME ${HEADER_FILE} NAME)
-    string(APPEND SINGLE_HEADER_CONTENT "#include \"log-manager/${HEADER_NAME}\"\n")
+    string(APPEND SINGLE_HEADER_CONTENT "#include \"log-manager/${HEADER_FILE}\"\n")
 endforeach()
 string(APPEND SINGLE_HEADER_CONTENT "\n#endif // LOG_MANAGER_H\n")
 
