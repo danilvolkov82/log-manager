@@ -18,15 +18,25 @@ public:
     std::string last_config;
 
     void configure(const std::string &json_config) override {
+        if(_configured) {
+            throw std::runtime_error("Sinks can be configured only once");
+        }
+
         last_config = json_config;
+        _configured = true;
     }
 
     void log(const LogDetails &log_entry) override {
+        if(!_configured) {
+            throw std::runtime_error("Sinks must be configured before usage");
+        }
+
         std::lock_guard<std::mutex> lock(_mutex);
         entries.push_back(log_entry);
     }
 
 private:
+    bool _configured{false};
     std::mutex _mutex;
 };
 } // namespace
@@ -43,6 +53,7 @@ TEST(LogBuilderTests, AddSinkReturnsSameBuilderForChaining) {
 TEST(LogBuilderTests, CreateBuildsLoggerThatForwardsMessagesToConfiguredSink) {
     LogBuilder builder;
     auto sink = std::make_shared<RecordingSink>();
+    sink->configure("{}");
     builder.addSink([sink]() { return sink; });
 
     auto logger = builder.create();
@@ -79,6 +90,7 @@ TEST(LogBuilderTests, AddSinkThrowsWhenFactoryIsEmpty) {
 TEST(LogBuilderTests, AddSinkThrowsAfterLoggerCreation) {
     LogBuilder builder;
     auto sink = std::make_shared<RecordingSink>();
+    sink->configure("{}");
     builder.addSink([sink]() { return sink; });
     (void)builder.create();
 
@@ -102,6 +114,8 @@ TEST(LogBuilderTests, AddSinksConfiguresAllSinksForCreatedLogger) {
     LogBuilder builder;
     auto first = std::make_shared<RecordingSink>();
     auto second = std::make_shared<RecordingSink>();
+    first->configure("{}");
+    second->configure("{}");
 
     builder.addSinks({
         [first]() { return first; },
@@ -142,6 +156,7 @@ TEST(LogBuilderTests, AddSinksThrowsWhenFactoryReturnsNull) {
 TEST(LogBuilderTests, AddSinksThrowsAfterLoggerCreation) {
     LogBuilder builder;
     auto sink = std::make_shared<RecordingSink>();
+    sink->configure("{}");
     builder.addSink([sink]() { return sink; });
     (void)builder.create();
 

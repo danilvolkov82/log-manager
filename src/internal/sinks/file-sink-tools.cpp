@@ -4,6 +4,7 @@
 #include <cerrno>
 #include <charconv>
 #include <fstream>
+#include <iostream>
 #include <regex>
 #include <vector>
 
@@ -37,6 +38,10 @@ tryMoveFile(const fs::path &source, const fs::path &target) {
 #endif
 
     fs::rename(source, target, ec);
+    if(ec) {
+        std::cerr << "[WARN] FileSinkTools: failed to move file from "
+                  << source << " to " << target << ": " << ec.message() << '\n';
+    }
     return !ec;
 }
 

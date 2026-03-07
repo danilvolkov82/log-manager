@@ -54,6 +54,12 @@ bool setAgeHours(const fs::path &path, int hours) {
     fs::last_write_time(path, fs::file_time_type::clock::now() - std::chrono::hours(hours), ec);
     return !ec;
 }
+
+std::string captureRotateFileStderr(const fs::path &path, std::int32_t max_backup_files) {
+    testing::internal::CaptureStderr();
+    rotateFile(path, max_backup_files);
+    return testing::internal::GetCapturedStderr();
+}
 } // namespace
 
 TEST(FileSinkToolsTests, AppendLineAddsTrailingNewlineAndAppends) {
@@ -129,6 +135,23 @@ TEST(FileSinkToolsTests, RotateFileWithZeroBackupsRemovesCurrentAndExistingBacku
     EXPECT_FALSE(fs::exists(current));
     EXPECT_FALSE(fs::exists(backup1));
     EXPECT_FALSE(fs::exists(backup2));
+}
+
+TEST(FileSinkToolsTests, RotateFileWarnsWhenMoveFails) {
+    ScopedTempDir dir;
+    const fs::path current = dir.path() / "app.log";
+    const fs::path blocked_backup = dir.path() / "app.log.1";
+
+    writeText(current, "blocked");
+    std::error_code ec;
+    fs::create_directories(blocked_backup, ec);
+    ASSERT_FALSE(ec);
+
+    const std::string stderr_output = captureRotateFileStderr(current, 2);
+
+    EXPECT_NE(stderr_output.find("[WARN] FileSinkTools: failed to move file from"), std::string::npos);
+    EXPECT_TRUE(fs::exists(current));
+    EXPECT_TRUE(fs::is_directory(blocked_backup));
 }
 
 TEST(FileSinkToolsTests, ShouldRotateByDailyDetectsDifferentCalendarDay) {

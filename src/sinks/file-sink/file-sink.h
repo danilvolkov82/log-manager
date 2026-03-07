@@ -1,3 +1,7 @@
+/**
+ * @file file-sink.h
+ * @brief File-based sink implementation with rotation support.
+ */
 //
 // Created by danil on 28.02.2026 
 //
@@ -11,26 +15,14 @@
 
 #pragma once
 
-namespace LogManager::Sinks {
-/**
- * @brief File rotation behavior flags.
- *
- * Flags can be combined with bitwise operators, for example:
- * `RotationMode::DAILY | RotationMode::SIZE`.
- */
-enum class RotationMode : uint8_t {
-	NONE = 0,
-	DAILY = 1,
-	SIZE = DAILY << 1,
-	STARTUP = SIZE << 1
-};
-
-RotationMode operator|(RotationMode a, RotationMode b);
-RotationMode operator&(RotationMode a, RotationMode b);
-bool hasFlag(RotationMode value, RotationMode flag);
-
+namespace LogManager::Sinks::FileSink {
 /**
  * @brief Writes log entries to a file.
+ *
+ * Configuration is provided through @ref configure using the JSON shape
+ * supported by @ref LogManager::Sinks::FileSink::FileSinkConfig. A file sink
+ * must be configured before the first call to @ref log and accepts only one
+ * successful configuration for its lifetime.
  *
  * Template placeholders for message format (`format`):
  * - `{timestamp}`: Entry timestamp in the default date-time representation.
@@ -52,16 +44,46 @@ bool hasFlag(RotationMode value, RotationMode flag);
  * - `{level}`: Log level text.
  * - `{tag}`: Log tag text.
  * - `{index}`: Rotation index for archived files.
+ *
+ * Configuration and logging are serialized internally, so concurrent
+ * `configure()` and `log()` calls are safe for a single sink instance.
  */
 class FileSink : public ISink {
 private:
 	class Impl;
 	std::unique_ptr<Impl> _impl;
 public:
+	/**
+	 * @brief Constructs a file sink with default configuration.
+	 */
 	FileSink();
+
+	/**
+	 * @brief Destroys the sink instance.
+	 */
 	~FileSink();
 
+	/**
+	 * @brief Applies file sink configuration from a JSON payload.
+	 *
+		 * Invalid payloads are rejected by the underlying config object and reported
+		 * as warnings to the standard error stream. Once configuration succeeds,
+		 * any later call throws.
+	 *
+	 * @param json_config JSON object string with file sink settings.
+	 * @throws std::runtime_error If the sink was already configured successfully.
+	 */
 	void configure(const std::string &json_config) override;
+
+	/**
+	 * @brief Writes one log entry to the configured file target.
+	 *
+	 * Depending on the active configuration, this may rotate files before the
+	 * entry is appended.
+	 *
+	 * @param log_entry Log entry to render and append.
+	 * @throws std::runtime_error If the sink has not been configured yet.
+	 */
 	void log(const LogDetails &log_entry) override;
 };
 } // LogManager::Sinks

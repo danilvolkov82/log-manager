@@ -41,6 +41,8 @@ std::string levelToString(LogManager::LogLevel level);
  *
  * Supported placeholders include date/time parts (`{yyyy}`, `{MM}`, `{dd}`,
  * `{HH}`, `{mm}`, `{ss}`, `{date}`, `{datetime}`), level and tag.
+ * When local time conversion fails, timestamp placeholders fall back to zeroed
+ * values and a warning is written to the standard error stream.
  *
  * @param filename_template Template text to render.
  * @param entry Log entry source values.
@@ -53,6 +55,8 @@ std::string renderFilenameTemplate(std::string_view filename_template, const Log
  *
  * Supported placeholders include `{timestamp}`, `{level}`, `{tag}`,
  * `{message}`, `{thread_id}` and `{exception}`.
+ * When local time conversion fails, `{timestamp}` falls back to
+ * `0000-00-00 00:00:00` and a warning is written to the standard error stream.
  *
  * @param format_template Template text to render.
  * @param entry Log entry source values.

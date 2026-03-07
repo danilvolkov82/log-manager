@@ -18,7 +18,8 @@ namespace LogManager {
  * @brief Configures logging sinks and creates a single logger instance.
  *
  * The builder supports fluent configuration via @ref addSink and @ref addSinks.
- * Once @ref create is called, the builder is considered finalized.
+ * Sinks are expected to be configured before they are registered in the
+ * builder. Once @ref create is called, the builder is considered finalized.
  */
 class LogBuilder {
 private:
@@ -35,21 +36,29 @@ public:
 	 */
 	~LogBuilder();
 
-	/**
-	 * @brief Adds a single sink produced by the given factory.
-	 * @param sink_factory Callable that returns a non-null sink instance.
-	 * @return Reference to this builder for fluent chaining.
-	 * @throws std::invalid_argument If the factory is empty or returns null.
-	 * @throws std::runtime_error If called after @ref create.
-	 */
+		/**
+		 * @brief Adds a single sink produced by the given factory.
+		 *
+		 * The returned sink instance is expected to have already completed its
+		 * single allowed configuration step.
+		 *
+		 * @param sink_factory Callable that returns a non-null sink instance.
+		 * @return Reference to this builder for fluent chaining.
+		 * @throws std::invalid_argument If the factory is empty or returns null.
+		 * @throws std::runtime_error If called after @ref create.
+		 */
 	LogBuilder& addSink(std::function<std::shared_ptr<ISink>()> sink_factory);
 
-	/**
-	 * @brief Adds multiple sinks from the provided factories.
-	 * @param sink_factories Collection of factories used to create sinks.
-	 * @return Reference to this builder for fluent chaining.
-	 * @throws std::invalid_argument If any factory is empty or returns null.
-	 * @throws std::runtime_error If called after @ref create.
+		/**
+		 * @brief Adds multiple sinks from the provided factories.
+		 *
+		 * Every produced sink instance is expected to have already completed its
+		 * single allowed configuration step.
+		 *
+		 * @param sink_factories Collection of factories used to create sinks.
+		 * @return Reference to this builder for fluent chaining.
+		 * @throws std::invalid_argument If any factory is empty or returns null.
+		 * @throws std::runtime_error If called after @ref create.
 	 */
 	LogBuilder& addSinks(const std::vector<std::function<std::shared_ptr<ISink>()>>& sink_factories);
 

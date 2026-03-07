@@ -59,6 +59,10 @@ private:
 public:
     /**
      * @brief Registers a sink that receives future log entries.
+     *
+     * The sink is expected to be configured already, because sink
+     * configuration is a one-time setup step handled before registration.
+     *
      * @param sink Sink instance to register. Must be non-null.
      * @throws std::invalid_argument If @p sink is null.
      */

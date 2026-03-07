@@ -28,15 +28,23 @@ public:
     /**
      * @brief Applies sink-specific configuration.
      *
-     * The JSON shape is sink-dependent and interpreted by concrete sink implementations.
+     * The JSON shape is sink-dependent and interpreted by concrete sink
+     * implementations. Every sink must be configured successfully before first
+     * use and may be configured only once for its lifetime.
      *
      * @param json_config Sink configuration payload in JSON format.
+     * @throws std::runtime_error If the sink has already been configured
+     * successfully.
      */
     virtual void configure(const std::string &json_config) = 0;
 
     /**
      * @brief Writes a log entry to the sink.
+     *
+     * This method may be called only after a successful call to @ref configure.
+     *
      * @param log_entry Entry to process.
+     * @throws std::runtime_error If the sink has not been configured yet.
      */
     virtual void log(const LogDetails &log_entry) = 0;
 };

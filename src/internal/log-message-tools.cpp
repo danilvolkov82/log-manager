@@ -4,6 +4,7 @@
  */
 #include "log-message-tools.h"
 #include <exception>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -13,6 +14,33 @@
 #include "time-tools.h"
 
 namespace LogManager::Internal {
+namespace {
+void writeRenderWarning(const char *context, const std::exception &e) {
+    std::cerr << "[WARN] LogMessageTools: failed to render " << context << ": "
+              << e.what() << '\n';
+}
+
+void writeUnknownRenderWarning(const char *context) {
+    std::cerr << "[WARN] LogMessageTools: failed to render " << context
+              << ": unknown error\n";
+}
+
+void setFilenameTimestampFallbacks(std::unordered_map<std::string, std::string> &formats) {
+    formats["{yyyy}"] = "0000";
+    formats["{MM}"] = "00";
+    formats["{dd}"] = "00";
+    formats["{HH}"] = "00";
+    formats["{mm}"] = "00";
+    formats["{ss}"] = "00";
+    formats["{date}"] = "0000-00-00";
+    formats["{datetime}"] = "00000000-000000";
+}
+
+void setMessageTimestampFallback(std::unordered_map<std::string, std::string> &formats) {
+    formats["{timestamp}"] = "0000-00-00 00:00:00";
+}
+}
+
 std::string 
 threadIdToString(const std::thread::id &thread_id) {
     std::ostringstream stream;
@@ -116,15 +144,12 @@ renderFilenameTemplate(std::string_view filename_template, const LogManager::Log
         formats["{ss}"] = formatTm(tm, "%S");
         formats["{date}"] = formatTm(tm, "%Y-%m-%d");
         formats["{datetime}"] = formatTm(tm, "%Y%m%d-%H%M%S");
+    } catch(const std::exception &e) {
+        writeRenderWarning("filename template timestamp values", e);
+        setFilenameTimestampFallbacks(formats);
     } catch(...) {
-        formats["{yyyy}"] = "0000";
-        formats["{MM}"] = "00";
-        formats["{dd}"] = "00";
-        formats["{HH}"] = "00";
-        formats["{mm}"] = "00";
-        formats["{ss}"] = "00";
-        formats["{date}"] = "0000-00-00";
-        formats["{datetime}"] = "00000000-000000";
+        writeUnknownRenderWarning("filename template timestamp values");
+        setFilenameTimestampFallbacks(formats);
     }
 
     return renderTemplate(filename_template, formats);
@@ -143,8 +168,12 @@ renderMessageTemplate(std::string_view format_template, const LogManager::LogDet
     try {
         const std::tm tm = toLocalTime(entry.timestamp);
         formats["{timestamp}"] = formatTm(tm, "%Y-%m-%d %H:%M:%S");
+    } catch(const std::exception &e) {
+        writeRenderWarning("message template timestamp", e);
+        setMessageTimestampFallback(formats);
     } catch(...) {
-        formats["{timestamp}"] = "0000-00-00 00:00:00";
+        writeUnknownRenderWarning("message template timestamp");
+        setMessageTimestampFallback(formats);
     }
 
     return renderTemplate(format_template, formats);
