@@ -28,7 +28,6 @@ private:
     std::mutex _log_mutex{};
     std::unordered_set<std::string> _startup_checked_files{};
 
-private:
     LogLevel getMinLevel() const {
         return _config->getMinLevel();
     }

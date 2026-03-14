@@ -16,12 +16,13 @@ set(LOG_MANAGER_SOURCES
     src/sinks/file-sink/file-sink-types.cpp
     src/sinks/file-sink/file-sink-config.cpp
     src/sinks/file-sink/file-sink.cpp
+    src/sinks/console-sink/console-sink.cpp
 )
 
 include(cmake/Json.cmake)
 
 file(GLOB LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src" "src/*.h")
-file(GLOB_RECURSE LOG_MANAGER_SINK_PUBLIC_HEADERS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src" "src/sinks/*.h")
+file(GLOB_RECURSE LOG_MANAGER_SINK_PUBLIC_HEADERS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src" "src/sinks/**/*.h")
 set(LOG_MANAGER_PUBLIC_HEADERS
     ${LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS}
     ${LOG_MANAGER_SINK_PUBLIC_HEADERS}
