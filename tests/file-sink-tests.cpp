@@ -113,15 +113,23 @@ TEST(FileSinkTests, LogWritesUsingConfiguredFilenameAndMessageFormat) {
     FileSink sink;
 
     sink.configure(makeConfig(file, "[{level}] {tag}: {message}", "VERBOSE"));
+    ASSERT_TRUE(sink.isConfigured());
     sink.log(LogDetails(LogLevel::INFO, "core", "started"));
 
     ASSERT_TRUE(fs::exists(file));
     EXPECT_EQ(readText(file), "[INFO] core: started\n");
 }
 
+TEST(FileSinkTests, IsConfiguredReturnsFalseBeforeSuccessfulConfiguration) {
+    FileSink sink;
+
+    EXPECT_FALSE(sink.isConfigured());
+}
+
 TEST(FileSinkTests, LogThrowsBeforeSuccessfulConfiguration) {
     FileSink sink;
 
+    EXPECT_FALSE(sink.isConfigured());
     EXPECT_THROW(sink.log(LogDetails(LogLevel::INFO, "core", "started")), std::runtime_error);
 }
 
@@ -144,6 +152,7 @@ TEST(FileSinkTests, ConfigureThrowsWhenCalledAfterSuccessfulConfiguration) {
     FileSink sink;
 
     ASSERT_NO_THROW(sink.configure(makeConfig(file, "{message}", "VERBOSE")));
+    ASSERT_TRUE(sink.isConfigured());
     EXPECT_THROW(sink.configure(makeConfig(file, "{message}", "VERBOSE")), std::runtime_error);
 }
 
@@ -166,9 +175,11 @@ TEST(FileSinkTests, FailedConfigurationDoesNotMarkSinkAsConfigured) {
     );
 
     EXPECT_NE(stderr_output.find("rotation must be a string"), std::string::npos);
+    EXPECT_FALSE(sink.isConfigured());
     EXPECT_THROW(sink.log(LogDetails(LogLevel::INFO, "core", "second")), std::runtime_error);
 
     ASSERT_NO_THROW(sink.configure(makeConfig(file, "{message}", "VERBOSE", "STARTUP", 0, 1)));
+    ASSERT_TRUE(sink.isConfigured());
     sink.log(LogDetails(LogLevel::INFO, "core", "second"));
     EXPECT_EQ(readText(file), "second\n");
 }

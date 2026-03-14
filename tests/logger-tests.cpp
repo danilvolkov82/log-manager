@@ -36,6 +36,10 @@ public:
         entries.push_back(log_entry);
     }
 
+    bool isConfigured() override {
+        return _configured;
+    }
+
 private:
     bool _configured{false};
     std::mutex _mutex;

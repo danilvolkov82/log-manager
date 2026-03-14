@@ -58,6 +58,7 @@ TEST(SystemLogSinkTests, LogWritesUsingConfiguredMessageFormatAndPriority) {
     SystemLogSink sink;
     sink.configure(makeConfig("[{level}] {tag}: {message}", "VERBOSE"));
 
+    ASSERT_TRUE(sink.isConfigured());
     sink.log(LogDetails(LogLevel::INFO, "core", "started"));
 
     EXPECT_EQ(write_call_count, 1);
@@ -65,10 +66,17 @@ TEST(SystemLogSinkTests, LogWritesUsingConfiguredMessageFormatAndPriority) {
     EXPECT_EQ(captured_message, "[INFO] core: started");
 }
 
+TEST(SystemLogSinkTests, IsConfiguredReturnsFalseBeforeSuccessfulConfiguration) {
+    SystemLogSink sink;
+
+    EXPECT_FALSE(sink.isConfigured());
+}
+
 TEST(SystemLogSinkTests, LogThrowsBeforeSuccessfulConfiguration) {
     ScopedSystemLogWriterOverride writer_override;
     SystemLogSink sink;
 
+    EXPECT_FALSE(sink.isConfigured());
     EXPECT_THROW(sink.log(LogDetails(LogLevel::INFO, "core", "started")), std::runtime_error);
     EXPECT_EQ(write_call_count, 0);
 }
@@ -90,6 +98,7 @@ TEST(SystemLogSinkTests, ConfigureThrowsWhenCalledAfterSuccessfulConfiguration) 
     SystemLogSink sink;
 
     ASSERT_NO_THROW(sink.configure(makeConfig("{message}", "VERBOSE")));
+    ASSERT_TRUE(sink.isConfigured());
     EXPECT_THROW(sink.configure(makeConfig("{message}", "VERBOSE")), std::runtime_error);
 }
 
@@ -103,10 +112,12 @@ TEST(SystemLogSinkTests, FailedConfigurationDoesNotMarkSinkAsConfigured) {
 
     EXPECT_NE(stderr_output.find("[WARN] GeneralSinkConfig: failed to apply configuration:"),
               std::string::npos);
+    EXPECT_FALSE(sink.isConfigured());
     EXPECT_THROW(sink.log(LogDetails(LogLevel::INFO, "core", "message")), std::runtime_error);
     EXPECT_EQ(write_call_count, 0);
 
     ASSERT_NO_THROW(sink.configure(makeConfig("{message}", "VERBOSE")));
+    ASSERT_TRUE(sink.isConfigured());
     sink.log(LogDetails(LogLevel::INFO, "core", "message"));
 
     EXPECT_EQ(write_call_count, 1);

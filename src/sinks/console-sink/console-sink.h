@@ -23,10 +23,10 @@ namespace LogManager::Sinks::ConsoleSink {
  * @ref LogManager::Internal::renderMessageTemplate, including `{timestamp}`,
  * `{level}`, `{tag}`, `{message}`, `{thread_id}`, and `{exception}`.
  *
- * Configuration and per-instance state access are serialized internally.
- * Console writes are also serialized across all console sink instances so that
- * concurrently emitted lines are not interleaved on the standard output
- * stream.
+ * Internal state access is synchronized for a single sink instance. Successful
+ * configuration can be observed through @ref isConfigured. Console writes are
+ * also serialized across all console sink instances so that concurrently
+ * emitted lines are not interleaved on the standard output stream.
  */
 class ConsoleSink : public ISink {
 private:
@@ -67,6 +67,16 @@ public:
      * @throws std::runtime_error If the sink has not been configured yet.
      */
     void log(const LogDetails &log_entry) override;
+
+    /**
+     * @brief Returns whether the sink has been configured successfully.
+     *
+     * This reports whether a prior @ref configure call completed successfully.
+     * Failed configuration attempts leave the sink unconfigured.
+     *
+     * @return `true` after successful configuration, otherwise `false`.
+     */
+    bool isConfigured() override;
 };
 }
 #endif // LOG_MANAGER_SINKS_CONSOLE_SINK_CONSOLE_SINK_H

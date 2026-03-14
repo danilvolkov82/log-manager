@@ -45,8 +45,8 @@ namespace LogManager::Sinks::FileSink {
  * - `{tag}`: Log tag text.
  * - `{index}`: Rotation index for archived files.
  *
- * Configuration and logging are serialized internally, so concurrent
- * `configure()` and `log()` calls are safe for a single sink instance.
+ * Internal state access is synchronized for a single sink instance.
+ * Successful configuration can be observed through @ref isConfigured.
  */
 class FileSink : public ISink {
 private:
@@ -85,6 +85,16 @@ public:
 	 * @throws std::runtime_error If the sink has not been configured yet.
 	 */
 	void log(const LogDetails &log_entry) override;
+
+	/**
+	 * @brief Returns whether the sink has been configured successfully.
+	 *
+	 * This reports whether a prior @ref configure call completed successfully.
+	 * Failed configuration attempts leave the sink unconfigured.
+	 *
+	 * @return `true` after successful configuration, otherwise `false`.
+	 */
+	bool isConfigured() override;
 };
 } // LogManager::Sinks
 

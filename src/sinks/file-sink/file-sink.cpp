@@ -4,6 +4,7 @@
 #include "file-sink.h"
 
 #include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -25,43 +26,21 @@ private:
 
     bool _configured{false};
     std::string _current_filename{};
-    std::mutex _log_mutex{};
-    std::unordered_set<std::string> _startup_checked_files{};
-
-    LogLevel getMinLevel() const {
-        return _config->getMinLevel();
-    }
-
-    const std::string getFileNameTemplate() const {
-        return _config->getFileNameTemplate();
-    }
-
-    const std::string getFormat() const {
-        return _config->getMessageFormat();
-    }
-
-    const RotationMode getRotation() const {
-        return _config->getRotation();
-    }
-
-    const int32_t getMaxBackupFiles() const {
-        return _config->getMaxBackupFiles();
-    }
-
-    const uint64_t getMaxFileSize() const {
-        return _config->getMaxFileSize();
-    }
-
-    const uint32_t getMaxFileAgeDays() const {
-        return _config->getMaxFileAgeDays();
-    }
+    std::shared_mutex _log_mutex;
+    std::mutex _file_mutex;
+    std::unordered_set<std::string> _startup_checked_files;
 
 public:
     Impl() : _config(std::make_unique<FileSinkConfig>()) {}
     ~Impl() = default;
 
+    bool isConfigured() {
+        std::shared_lock<std::shared_mutex> lock(_log_mutex);
+        return _configured;
+    }
+
     void configure(const std::string &json_config) {
-        std::lock_guard<std::mutex> lock(_log_mutex);
+        std::unique_lock<std::shared_mutex> lock(_log_mutex);
         if(_configured) {
             throw std::runtime_error("Sinks can be configured only once");
         }
@@ -73,39 +52,60 @@ public:
     }
 
     void log(const LogDetails &log_entry) {
-        std::lock_guard<std::mutex> lock(_log_mutex);
-        if(!_configured) {
-            throw std::runtime_error("Sinks must be configured before usage");
+        std::string current_line;
+        std::string current_filename;
+        std::string file_name_template;
+        RotationMode rotation;
+        int32_t max_backup_files;
+        uint64_t max_file_size;
+        uint32_t max_file_age;
+        {
+            std::shared_lock<std::shared_mutex> lock(_log_mutex);
+            if (!_configured) {
+                throw std::runtime_error("Sinks must be configured before usage");
+            }
+
+            if (static_cast<int>(log_entry.level) < static_cast<int>(_config->getMinLevel())) {
+                return;
+            }
+
+            file_name_template = _config->getFileNameTemplate();
+            current_filename = renderFilenameTemplate(file_name_template, log_entry);
+            current_line = renderMessageTemplate(_config->getMessageFormat(), log_entry);
+
+            rotation = _config->getRotation();
+            max_backup_files = _config->getMaxBackupFiles();
+            max_file_size = _config->getMaxFileSize();
+            max_file_age = _config->getMaxFileAgeDays();
         }
 
-        if(static_cast<int>(log_entry.level) < static_cast<int>(this->getMinLevel())) {
-            return;
+        bool inserted_file;
+        {
+            std::unique_lock<std::shared_mutex> lock(_log_mutex);
+            _current_filename = current_filename;
+            inserted_file = _startup_checked_files.insert(_current_filename).second;
         }
 
-        _current_filename = renderFilenameTemplate(this->getFileNameTemplate(), log_entry);
-        const std::string current_line = renderMessageTemplate(this->getFormat(), log_entry);
-
-        const RotationMode rotation = this->getRotation();
-        const int32_t max_backup_files = this->getMaxBackupFiles();
-        if(_startup_checked_files.insert(_current_filename).second && hasFlag(rotation, RotationMode::STARTUP)) {
-            rotateFile(_current_filename, max_backup_files);
+        std::lock_guard<std::mutex> file_lock(_file_mutex);
+        if (inserted_file && hasFlag(rotation, RotationMode::STARTUP)) {
+            rotateFile(current_filename, max_backup_files);
         }
 
-        if(hasFlag(rotation, RotationMode::DAILY) && shouldRotateByDaily(_current_filename, log_entry.timestamp)) {
-            rotateFile(_current_filename, max_backup_files);
+        if(hasFlag(rotation, RotationMode::DAILY) && shouldRotateByDaily(current_filename, log_entry.timestamp)) {
+            rotateFile(current_filename, max_backup_files);
         }
 
         if(hasFlag(rotation, RotationMode::SIZE)) {
             const std::uint64_t incoming_bytes = static_cast<std::uint64_t>(current_line.size()) + 1U;
-            if(shouldRotateBySize(_current_filename, incoming_bytes, this->getMaxFileSize())) {
-                rotateFile(_current_filename, max_backup_files);
+            if(shouldRotateBySize(current_filename, incoming_bytes, max_file_size)) {
+                rotateFile(current_filename, max_backup_files);
             }
         }
 
-        pruneTemplateFilesByAge(_current_filename, this->getFileNameTemplate(), this->getMaxFileAgeDays());
+        pruneTemplateFilesByAge(current_filename, file_name_template, max_file_age);
 
-        ensureParentDirectory(_current_filename);
-        appendLine(_current_filename, current_line);
+        ensureParentDirectory(current_filename);
+        appendLine(current_filename, current_line);
     }
 };
 
@@ -122,4 +122,9 @@ FileSink::configure(const std::string &json_config) {
 void
 FileSink::log(const LogDetails &log_entry) {
     _impl->log(log_entry);
+}
+
+bool
+FileSink::isConfigured() {
+    return _impl->isConfigured();
 }

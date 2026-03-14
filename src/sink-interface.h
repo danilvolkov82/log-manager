@@ -47,6 +47,19 @@ public:
      * @throws std::runtime_error If the sink has not been configured yet.
      */
     virtual void log(const LogDetails &log_entry) = 0;
+
+    /**
+     * @brief Returns whether the sink has completed a successful configuration.
+     *
+     * This is a state query only. A return value of `true` means the sink has
+     * accepted configuration and may be used for @ref log calls. A return value
+     * of `false` means configuration has not succeeded yet, either because
+     * @ref configure has not been called or because the last configuration
+     * attempt failed.
+     *
+     * @return `true` after successful configuration, otherwise `false`.
+     */
+    virtual bool isConfigured() = 0;
 };
 }
 #endif //SINK_INTERFACE_H

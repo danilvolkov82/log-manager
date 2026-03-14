@@ -54,6 +54,10 @@ public:
             throw std::invalid_argument("sink must not be null");
         }
 
+        if (!sink->isConfigured()) {
+            throw std::runtime_error("Sink must be configured");
+        }
+
         _sinks.push_back(std::move(sink));
     }
 
@@ -81,6 +85,10 @@ LogBuilder::addSink(std::function<std::shared_ptr<ISink>()> sink_factory) {
     }
 
     std::shared_ptr<ISink> sink = sink_factory();
+    if(!sink) {
+        throw std::invalid_argument("sink factory returned null");
+    }
+
     _impl->addSink(std::move(sink));
 
     return *this;
@@ -90,6 +98,25 @@ LogBuilder&
 LogBuilder::addSinks(const std::vector<std::function<std::shared_ptr<ISink>()>>& sink_factories) {
     for (const auto &sink_factory : sink_factories) {
         addSink(sink_factory);
+    }
+
+    return *this;
+}
+
+LogBuilder&
+LogBuilder::addSink(std::shared_ptr<ISink> sink) {
+    if (!sink) {
+        throw std::invalid_argument("sink must not be empty");
+    }
+
+    _impl->addSink(std::move(sink));
+    return *this;
+}
+
+LogBuilder&
+LogBuilder::addSinks(const std::vector<std::shared_ptr<ISink>> &sinks) {
+    for(auto sink : sinks) {
+        addSink(std::move(sink));
     }
 
     return *this;

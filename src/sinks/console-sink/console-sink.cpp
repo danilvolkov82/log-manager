@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <mutex>
+#include <shared_mutex>
 #include <stdexcept>
 
 #include "sinks/general-sink-config.h"
@@ -16,29 +17,26 @@ using namespace LogManager::Sinks::ConsoleSink;
 using namespace LogManager::Internal;
 
 namespace {
-std::mutex console_mutex{};
+std::mutex console_mutex;
 }
 
 class ConsoleSink::Impl {
 private:
     std::unique_ptr<GeneralSinkConfig> _config;
     bool _configured{false};
-    std::mutex _log_mutex{};
-
-    LogLevel getMinLevel() const {
-        return _config->getMinLevel();
-    }
-
-    const std::string getFormat() const {
-        return _config->getMessageFormat();
-    }
+    std::shared_mutex _log_mutex;
 
 public:
     Impl() : _config(std::make_unique<GeneralSinkConfig>()) {}
     ~Impl() = default;
 
+    bool isConfigured() {
+        std::shared_lock<std::shared_mutex> lock(_log_mutex);
+        return _configured;
+    }
+
     void configure(const std::string &json_config) {
-        std::lock_guard<std::mutex> lock(_log_mutex);
+        std::unique_lock<std::shared_mutex> lock(_log_mutex);
         if (_configured)  {
             throw std::runtime_error("Sinks can be configured only once");
         }
@@ -51,16 +49,16 @@ public:
     void log(const LogDetails &log_entry) {
         std::string message;
         {
-            std::lock_guard<std::mutex> lock(_log_mutex);
+            std::shared_lock<std::shared_mutex> lock(_log_mutex);
             if (!_configured) {
                 throw std::runtime_error("Sinks must be configured before usage");
             }
 
-            if (static_cast<int>(log_entry.level) < static_cast<int>(this->getMinLevel())) {
+            if (static_cast<int>(log_entry.level) < static_cast<int>(_config->getMinLevel())) {
                 return;
             }
 
-            message = renderMessageTemplate(this->getFormat(), log_entry);
+            message = renderMessageTemplate(_config->getMessageFormat(), log_entry);
         }
 
         std::lock_guard<std::mutex> console_lock(console_mutex);
@@ -81,3 +79,7 @@ ConsoleSink::log(const LogDetails &log_entry) {
     _impl->log(log_entry);
 }
 
+bool
+ConsoleSink::isConfigured() {
+    return _impl->isConfigured();
+}

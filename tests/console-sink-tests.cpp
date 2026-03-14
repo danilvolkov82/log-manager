@@ -35,6 +35,7 @@ TEST(ConsoleSinkTests, LogWritesUsingConfiguredMessageFormat) {
     ConsoleSink sink;
     sink.configure(makeConfig("[{level}] {tag}: {message}", "VERBOSE"));
 
+    ASSERT_TRUE(sink.isConfigured());
     const std::string output = captureStdout([&sink]() {
         sink.log(LogDetails(LogLevel::INFO, "core", "started"));
     });
@@ -42,9 +43,16 @@ TEST(ConsoleSinkTests, LogWritesUsingConfiguredMessageFormat) {
     EXPECT_EQ(output, "[INFO] core: started\n");
 }
 
+TEST(ConsoleSinkTests, IsConfiguredReturnsFalseBeforeSuccessfulConfiguration) {
+    ConsoleSink sink;
+
+    EXPECT_FALSE(sink.isConfigured());
+}
+
 TEST(ConsoleSinkTests, LogThrowsBeforeSuccessfulConfiguration) {
     ConsoleSink sink;
 
+    EXPECT_FALSE(sink.isConfigured());
     EXPECT_THROW(sink.log(LogDetails(LogLevel::INFO, "core", "started")), std::runtime_error);
 }
 
@@ -64,6 +72,7 @@ TEST(ConsoleSinkTests, ConfigureThrowsWhenCalledAfterSuccessfulConfiguration) {
     ConsoleSink sink;
 
     ASSERT_NO_THROW(sink.configure(makeConfig("{message}", "VERBOSE")));
+    ASSERT_TRUE(sink.isConfigured());
     EXPECT_THROW(sink.configure(makeConfig("{message}", "VERBOSE")), std::runtime_error);
 }
 
@@ -76,9 +85,11 @@ TEST(ConsoleSinkTests, FailedConfigurationDoesNotMarkSinkAsConfigured) {
 
     EXPECT_NE(stderr_output.find("[WARN] GeneralSinkConfig: failed to apply configuration:"),
               std::string::npos);
+    EXPECT_FALSE(sink.isConfigured());
     EXPECT_THROW(sink.log(LogDetails(LogLevel::INFO, "core", "message")), std::runtime_error);
 
     ASSERT_NO_THROW(sink.configure(makeConfig("{message}", "VERBOSE")));
+    ASSERT_TRUE(sink.isConfigured());
 
     const std::string output = captureStdout([&sink]() {
         sink.log(LogDetails(LogLevel::INFO, "core", "message"));

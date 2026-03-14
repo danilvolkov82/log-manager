@@ -24,8 +24,8 @@ namespace LogManager::Sinks::SystemLogSink {
  * @ref LogManager::Internal::renderMessageTemplate, including `{timestamp}`,
  * `{level}`, `{tag}`, `{message}`, `{thread_id}`, and `{exception}`.
  *
- * Configuration and logging are serialized internally, so concurrent
- * `configure()` and `log()` calls are safe for a single sink instance.
+ * Internal state access is synchronized for a single sink instance. Successful
+ * configuration can be observed through @ref isConfigured.
  *
  * This sink targets Linux syslog. On unsupported platforms, delivery fails at
  * runtime when @ref log tries to emit a message.
@@ -70,6 +70,16 @@ public:
      * @throws std::runtime_error If the current platform does not support syslog.
      */
     void log(const LogDetails &log_entry) override;
+
+    /**
+     * @brief Returns whether the sink has been configured successfully.
+     *
+     * This reports whether a prior @ref configure call completed successfully.
+     * Failed configuration attempts leave the sink unconfigured.
+     *
+     * @return `true` after successful configuration, otherwise `false`.
+     */
+    bool isConfigured() override;
 };
 }
 
