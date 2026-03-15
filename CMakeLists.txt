@@ -36,6 +36,17 @@ set(LOG_MANAGER_ROOT_UMBRELLA_HEADERS
     ${LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS}
     ${LOG_MANAGER_GENERAL_SINK_PUBLIC_HEADER}
 )
+set(LOG_MANAGER_FILE_SINK_UMBRELLA_HEADERS
+    file-sink/file-sink.h
+    file-sink/file-sink-config.h
+    file-sink/file-sink-types.h
+)
+set(LOG_MANAGER_CONSOLE_SINK_UMBRELLA_HEADERS
+    console-sink/console-sink.h
+)
+set(LOG_MANAGER_SYSTEM_LOG_SINK_UMBRELLA_HEADERS
+    system-log-sink/system-log-sink.h
+)
 
 set(LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS_ABS)
 foreach(HEADER_FILE ${LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS})
@@ -101,8 +112,35 @@ foreach(HEADER_FILE ${LOG_MANAGER_ROOT_UMBRELLA_HEADERS})
 endforeach()
 string(APPEND SINGLE_HEADER_CONTENT "\n#endif // LOG_MANAGER_H\n")
 
+set(FILE_SINK_SINGLE_HEADER_CONTENT "#ifndef FILE_SINK_H\n#define FILE_SINK_H\n\n")
+foreach(HEADER_FILE ${LOG_MANAGER_FILE_SINK_UMBRELLA_HEADERS})
+    string(APPEND FILE_SINK_SINGLE_HEADER_CONTENT "#include \"log-manager/${HEADER_FILE}\"\n")
+endforeach()
+string(APPEND FILE_SINK_SINGLE_HEADER_CONTENT "\n#endif // FILE_SINK_H\n")
+
+set(CONSOLE_SINK_SINGLE_HEADER_CONTENT "#ifndef CONSOLE_SINK_H\n#define CONSOLE_SINK_H\n\n")
+foreach(HEADER_FILE ${LOG_MANAGER_CONSOLE_SINK_UMBRELLA_HEADERS})
+    string(APPEND CONSOLE_SINK_SINGLE_HEADER_CONTENT "#include \"log-manager/${HEADER_FILE}\"\n")
+endforeach()
+string(APPEND CONSOLE_SINK_SINGLE_HEADER_CONTENT "\n#endif // CONSOLE_SINK_H\n")
+
+set(SYSTEM_LOG_SINK_SINGLE_HEADER_CONTENT
+    "#ifndef SYSTEM_LOG_SINK_H\n#define SYSTEM_LOG_SINK_H\n\n")
+foreach(HEADER_FILE ${LOG_MANAGER_SYSTEM_LOG_SINK_UMBRELLA_HEADERS})
+    string(APPEND SYSTEM_LOG_SINK_SINGLE_HEADER_CONTENT "#include \"log-manager/${HEADER_FILE}\"\n")
+endforeach()
+string(APPEND SYSTEM_LOG_SINK_SINGLE_HEADER_CONTENT "\n#endif // SYSTEM_LOG_SINK_H\n")
+
 file(WRITE "${CMAKE_BINARY_DIR}/log-manager.h" "${SINGLE_HEADER_CONTENT}")
-install(FILES "${CMAKE_BINARY_DIR}/log-manager.h" DESTINATION include)
+file(WRITE "${CMAKE_BINARY_DIR}/file-sink.h" "${FILE_SINK_SINGLE_HEADER_CONTENT}")
+file(WRITE "${CMAKE_BINARY_DIR}/console-sink.h" "${CONSOLE_SINK_SINGLE_HEADER_CONTENT}")
+file(WRITE "${CMAKE_BINARY_DIR}/system-log-sink.h" "${SYSTEM_LOG_SINK_SINGLE_HEADER_CONTENT}")
+install(FILES
+    "${CMAKE_BINARY_DIR}/log-manager.h"
+    "${CMAKE_BINARY_DIR}/file-sink.h"
+    "${CMAKE_BINARY_DIR}/console-sink.h"
+    "${CMAKE_BINARY_DIR}/system-log-sink.h"
+    DESTINATION include)
 
 option(BUILD_TESTS "Build tests" OFF)
 if(BUILD_TESTS)
