@@ -37,15 +37,15 @@ set(LOG_MANAGER_ROOT_UMBRELLA_HEADERS
     ${LOG_MANAGER_GENERAL_SINK_PUBLIC_HEADER}
 )
 set(LOG_MANAGER_FILE_SINK_UMBRELLA_HEADERS
-    file-sink/file-sink.h
-    file-sink/file-sink-config.h
-    file-sink/file-sink-types.h
+    sinks/file-sink/file-sink.h
+    sinks/file-sink/file-sink-config.h
+    sinks/file-sink/file-sink-types.h
 )
 set(LOG_MANAGER_CONSOLE_SINK_UMBRELLA_HEADERS
-    console-sink/console-sink.h
+    sinks/console-sink/console-sink.h
 )
 set(LOG_MANAGER_SYSTEM_LOG_SINK_UMBRELLA_HEADERS
-    system-log-sink/system-log-sink.h
+    sinks/system-log-sink/system-log-sink.h
 )
 
 set(LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS_ABS)
@@ -60,7 +60,6 @@ set_target_properties(log-manager PROPERTIES OUTPUT_NAME logmanager++)
 target_include_directories(log-manager
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/sinks>
         $<INSTALL_INTERFACE:include>
         $<INSTALL_INTERFACE:include/log-manager>
 )
@@ -74,7 +73,6 @@ set_target_properties(log-manager-shared PROPERTIES OUTPUT_NAME logmanager++)
 target_include_directories(log-manager-shared
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/sinks>
         $<INSTALL_INTERFACE:include>
         $<INSTALL_INTERFACE:include/log-manager>
 )
@@ -90,25 +88,24 @@ install(TARGETS log-manager log-manager-shared
 )
 
 install(FILES ${LOG_MANAGER_TOP_LEVEL_PUBLIC_HEADERS_ABS}
-    "${LOG_MANAGER_GENERAL_SINK_PUBLIC_HEADER_ABS}"
     DESTINATION include/log-manager)
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/sinks/file-sink/" DESTINATION include/log-manager/file-sink
+install(FILES "${LOG_MANAGER_GENERAL_SINK_PUBLIC_HEADER_ABS}" DESTINATION include/log-manager/sinks)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/sinks/file-sink/" DESTINATION include/log-manager/sinks/file-sink
     FILES_MATCHING
     PATTERN "*.h"
 )
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/sinks/console-sink/" DESTINATION include/log-manager/console-sink
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/sinks/console-sink/" DESTINATION include/log-manager/sinks/console-sink
     FILES_MATCHING
     PATTERN "*.h"
 )
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/sinks/system-log-sink/" DESTINATION include/log-manager/system-log-sink
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/sinks/system-log-sink/" DESTINATION include/log-manager/sinks/system-log-sink
     FILES_MATCHING
     PATTERN "*.h"
 )
 
 set(SINGLE_HEADER_CONTENT "#ifndef LOG_MANAGER_H\n#define LOG_MANAGER_H\n\n")
 foreach(HEADER_FILE ${LOG_MANAGER_ROOT_UMBRELLA_HEADERS})
-    get_filename_component(HEADER_NAME "${HEADER_FILE}" NAME)
-    string(APPEND SINGLE_HEADER_CONTENT "#include \"log-manager/${HEADER_NAME}\"\n")
+    string(APPEND SINGLE_HEADER_CONTENT "#include \"log-manager/${HEADER_FILE}\"\n")
 endforeach()
 string(APPEND SINGLE_HEADER_CONTENT "\n#endif // LOG_MANAGER_H\n")
 

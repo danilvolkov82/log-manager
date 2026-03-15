@@ -8,7 +8,7 @@
 #include <string>
 #include <string_view>
 
-#include "file-sink/file-sink.h"
+#include "sinks/file-sink/file-sink.h"
 
 namespace {
 using LogManager::LogDetails;

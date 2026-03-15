@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "console-sink/console-sink.h"
+#include "sinks/console-sink/console-sink.h"
 
 namespace {
 using LogManager::LogDetails;

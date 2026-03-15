@@ -5,10 +5,9 @@ configurable sinks, and a fluent `LogBuilder`.
 
 Public include layout:
 
+- Installed headers keep the source layout under `log-manager/sinks/...`.
 - `log-manager.h` aggregates the root public headers.
-- `file-sink/file-sink.h` aggregates the file sink folder headers.
-- `console-sink/console-sink.h` is the console sink entry point.
-- `system-log-sink/system-log-sink.h` is the system log sink entry point.
+- `file-sink.h`, `console-sink.h`, and `system-log-sink.h` are generated convenience umbrellas.
 
 ## LogBuilder
 
@@ -23,7 +22,7 @@ Example:
 
 ```cpp
 #include "log-builder.h"
-#include "console-sink/console-sink.h"
+#include "sinks/console-sink/console-sink.h"
 
 using namespace LogManager;
 using LogManager::Sinks::ConsoleSink::ConsoleSink;

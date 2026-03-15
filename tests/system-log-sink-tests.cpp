@@ -6,7 +6,7 @@
 #include <string_view>
 
 #include "internal/sinks/system-log-sink-tools.h"
-#include "system-log-sink/system-log-sink.h"
+#include "sinks/system-log-sink/system-log-sink.h"
 
 namespace {
 using LogManager::LogDetails;
