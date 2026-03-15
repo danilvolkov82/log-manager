@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 
-#include "sinks/general-sink-config.h"
+#include "../general-sink-config.h"
 #include "file-sink-types.h"
 
 namespace LogManager::Sinks::FileSink {

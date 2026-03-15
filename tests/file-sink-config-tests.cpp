@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "sinks/file-sink/file-sink-config.h"
+#include "file-sink/file-sink-config.h"
 
 namespace {
 using namespace LogManager::Sinks::FileSink;

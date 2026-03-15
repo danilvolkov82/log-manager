@@ -3,6 +3,13 @@
 `log-manager` is a C++ logging library built around a logger interface,
 configurable sinks, and a fluent `LogBuilder`.
 
+Public include layout:
+
+- `log-manager.h` aggregates the root public headers.
+- `file-sink/file-sink.h` aggregates the file sink folder headers.
+- `console-sink/console-sink.h` is the console sink entry point.
+- `system-log-sink/system-log-sink.h` is the system log sink entry point.
+
 ## LogBuilder
 
 `LogBuilder` supports three sink registration styles:
@@ -16,7 +23,7 @@ Example:
 
 ```cpp
 #include "log-builder.h"
-#include "sinks/console-sink/console-sink.h"
+#include "console-sink/console-sink.h"
 
 using namespace LogManager;
 using LogManager::Sinks::ConsoleSink::ConsoleSink;

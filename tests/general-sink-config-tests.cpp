@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "sinks/general-sink-config.h"
+#include "general-sink-config.h"
 
 namespace {
 using namespace LogManager;

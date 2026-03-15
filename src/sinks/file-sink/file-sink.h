@@ -9,6 +9,8 @@
 #define LOG_MANAGER_SINKS_FILE_SINK_H
 #include "sink-interface.h"
 #include "tools.h"
+#include "file-sink-config.h"
+#include "file-sink-types.h"
 
 #include <memory>
 #include <cstdint>

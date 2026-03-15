@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "sinks/file-sink/file-sink-types.h"
+#include "file-sink/file-sink-types.h"
 
 namespace {
 using namespace LogManager::Sinks::FileSink;
