@@ -129,15 +129,16 @@ endforeach()
 string(APPEND SYSTEM_LOG_SINK_SINGLE_HEADER_CONTENT "\n#endif // SYSTEM_LOG_SINK_H\n")
 
 file(WRITE "${CMAKE_BINARY_DIR}/log-manager.h" "${SINGLE_HEADER_CONTENT}")
-file(WRITE "${CMAKE_BINARY_DIR}/file-sink.h" "${FILE_SINK_SINGLE_HEADER_CONTENT}")
-file(WRITE "${CMAKE_BINARY_DIR}/console-sink.h" "${CONSOLE_SINK_SINGLE_HEADER_CONTENT}")
-file(WRITE "${CMAKE_BINARY_DIR}/system-log-sink.h" "${SYSTEM_LOG_SINK_SINGLE_HEADER_CONTENT}")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/sinks")
+file(WRITE "${CMAKE_BINARY_DIR}/sinks/file-sink.h" "${FILE_SINK_SINGLE_HEADER_CONTENT}")
+file(WRITE "${CMAKE_BINARY_DIR}/sinks/console-sink.h" "${CONSOLE_SINK_SINGLE_HEADER_CONTENT}")
+file(WRITE "${CMAKE_BINARY_DIR}/sinks/system-log-sink.h" "${SYSTEM_LOG_SINK_SINGLE_HEADER_CONTENT}")
+install(FILES "${CMAKE_BINARY_DIR}/log-manager.h" DESTINATION include)
 install(FILES
-    "${CMAKE_BINARY_DIR}/log-manager.h"
-    "${CMAKE_BINARY_DIR}/file-sink.h"
-    "${CMAKE_BINARY_DIR}/console-sink.h"
-    "${CMAKE_BINARY_DIR}/system-log-sink.h"
-    DESTINATION include)
+    "${CMAKE_BINARY_DIR}/sinks/file-sink.h"
+    "${CMAKE_BINARY_DIR}/sinks/console-sink.h"
+    "${CMAKE_BINARY_DIR}/sinks/system-log-sink.h"
+    DESTINATION include/sinks)
 
 option(BUILD_TESTS "Build tests" OFF)
 if(BUILD_TESTS)

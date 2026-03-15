@@ -7,7 +7,7 @@ Public include layout:
 
 - Installed headers keep the source layout under `log-manager/sinks/...`.
 - `log-manager.h` aggregates the root public headers.
-- `file-sink.h`, `console-sink.h`, and `system-log-sink.h` are generated convenience umbrellas.
+- `sinks/file-sink.h`, `sinks/console-sink.h`, and `sinks/system-log-sink.h` are generated convenience umbrellas.
 
 ## LogBuilder
 
