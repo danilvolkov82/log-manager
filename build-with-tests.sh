@@ -5,8 +5,9 @@ set -euo pipefail
 # Allow callers to override, e.g. FETCHCONTENT_FULLY_DISCONNECTED=ON ./build-with-tests.sh
 fetchcontent_disconnected="${FETCHCONTENT_FULLY_DISCONNECTED:-OFF}"
 
-cmake --fresh -S . -B build-tests \
+cmake -S . -B build-tests \
     -DBUILD_TESTS=ON \
     -DFETCHCONTENT_FULLY_DISCONNECTED="${fetchcontent_disconnected}"
 cmake --build build-tests
-ctest --test-dir build-tests "$@"
+cd build-tests
+ctest "$@"

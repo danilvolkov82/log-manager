@@ -66,16 +66,10 @@ if(NOT LOG_MANAGER_FORCE_FETCH_NLOHMANN_JSON)
     endif()
 endif()
 
-# Ensure extracted archives get fresh timestamps to avoid stale rebuilds (CMP0135).
-if(POLICY CMP0135)
-    cmake_policy(SET CMP0135 NEW)
-endif()
-
 FetchContent_Declare(
     nlohmann_json
     URL https://github.com/nlohmann/json/releases/download/v${LOG_MANAGER_NLOHMANN_JSON_VERSION}/include.zip
     URL_HASH SHA256=87b5884741427220d3a33df1363ae0e8b898099fbc59f1c451113f6732891014
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
 # Header-only usage: download sources but do not add upstream subdirectories.
