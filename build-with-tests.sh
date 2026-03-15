@@ -9,5 +9,4 @@ cmake -S . -B build-tests \
     -DBUILD_TESTS=ON \
     -DFETCHCONTENT_FULLY_DISCONNECTED="${fetchcontent_disconnected}"
 cmake --build build-tests
-cd build-tests
-ctest "$@"
+ctest --test-dir build-tests $@
